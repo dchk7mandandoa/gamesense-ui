@@ -51,6 +51,9 @@ do -- Library
             CloseBind = Enum.KeyCode.Insert,
             SectionResizeIncrements = 1,
             WatermarkRefreshRate = 1,
+            WatermarkEnabled = true,
+            NotificationEnabled = true,
+            NotificationEvent = "All",
             MainUI = nil,
             Initialized = false,
             Faded = false,
@@ -2696,13 +2699,13 @@ do -- Library
             MultiBox:AddValue(Value)
         end
         --
+        MultiBoxMainOutline.Visible = false
+        MultiBoxMainOutline.Size = UDim2.new(0, MultiBoxOutline_5.AbsoluteSize.X, 0, 0)
         Library:Fade(false, Library:GetObjectsTable(MultiBoxMainOutline, true), MultiBoxMainOutline, 0.1)
         --
         if Options.Hiding then
             MultiBox:SetVisible(false)
         end
-        --
-        MultiBox:Toggle(true)
         --
         return MultiBox
     end
@@ -3159,13 +3162,13 @@ do -- Library
             Dropdown:AddValue(Value)
         end
         --
+        DropdownMainOutline.Visible = false
+        DropdownMainOutline.Size = UDim2.new(0, DropdownOutline_5.AbsoluteSize.X, 0, 0)
         Library:Fade(false, Library:GetObjectsTable(DropdownMainOutline, true), DropdownMainOutline, 0.1)
         --
         if Options.Hiding then
             Dropdown:SetVisible(false)
         end
-        --
-        Dropdown:Toggle(true)
         --
         return Dropdown
     end
@@ -6971,6 +6974,7 @@ do -- Library
             --
             do -- Functions
                 function Library:ToggleWatermark(State)
+                    Library.UI.WatermarkEnabled = State
                     Watermark.CanUse = State
                     MainWatermark.Visible = State
                 end
@@ -6983,6 +6987,9 @@ do -- Library
                     MainWatermark.Position = UDim2.new(1, -(MainWatermark.Size.X.Offset) - 5, 0, 5)
                 end
             end
+            --
+            MainWatermark.Visible = Library.UI.WatermarkEnabled
+            Watermark.CanUse = Library.UI.WatermarkEnabled
             --
             local R, G, B = Library.Theme.Default.Accent.R * 255, Library.Theme.Default.Accent.G * 255, Library.Theme.Default.Accent.B * 255
             --
@@ -7175,6 +7182,30 @@ do -- Library
             Notification:UpdatePositions()
             --
             return Notification
+        end
+        --
+        function Library:CanNotify(EventType)
+            if not Library.UI.NotificationEnabled then
+                return false
+            end
+            --
+            local Allowed = Library.UI.NotificationEvent
+            --
+            return Allowed == "All" or Allowed == EventType
+        end
+        --
+        function Library:NotifyEvent(EventType, Message, Position, Delay)
+            if not Library:CanNotify(EventType) then
+                return false
+            end
+            --
+            Library:Notify({
+                Message = Message,
+                Position = Position or "Top Left",
+                Delay = Delay or 3,
+            })
+            --
+            return true
         end
         --
         function Library:Init()
@@ -7438,6 +7469,8 @@ do -- Visuals
     end
 end
 --
+local SpectatorList = nil
+--
 do -- Misc
     local Movement = Misc:Section({Name = "Movement", Fill = true})
     local Utility = Misc:Section({Name = "Utility", Side = "Right", Fill = true})
@@ -7462,7 +7495,7 @@ do -- Misc
     Utility:Slider({Name = "Crosshair size", Min = 3, Max = 20, Default = 8})
     Utility:Label({Message = "Theme color"}):ColorPicker({Default = Library.Theme.Default.Accent})
     --
-    local SpectatorList = Utility:List({Size = 110})
+    SpectatorList = Utility:List({Size = 110})
     SpectatorList:AddValue("awesomegamer5")
     SpectatorList:AddValue("bob")
     SpectatorList:AddValue("mark123")
@@ -7481,23 +7514,46 @@ do -- Misc
 end
 --
 do -- Settings
-    local SettingsSection = Settings:Section({Name = "Settings", Side = "Right", Fill = true})
+    local SettingsLeft = Settings:Section({Name = "General", Fill = true})
+    local SettingsRight = Settings:Section({Name = "Notifications", Side = "Right", Fill = true})
     --
     do -- Settings
-        SettingsSection:Label({Message = "Menu key"}):Keybind({Default = Enum.KeyCode.Insert, UseMode = false, Callback = function(Key) Library.UI.CloseBind = Key end})
-        SettingsSection:Label({Message = "Menu color"}):ColorPicker({Default = Library.Theme.Default.Accent, Callback = function(Color)
+        local WatermarkToggle = SettingsLeft:Toggle({Name = "Watermark", Default = true, Callback = function(State)
+            if Library and Library.ToggleWatermark then
+                Library:ToggleWatermark(State)
+            else
+                Library.UI.WatermarkEnabled = State
+            end
+        end})
+        --
+        local SpectatorToggle = SettingsLeft:Toggle({Name = "Spectator list", Default = true, Callback = function(State)
+            if SpectatorList and SpectatorList.SetVisible then
+                SpectatorList:SetVisible(State)
+            end
+        end})
+        --
+        local NotifyToggle = SettingsLeft:Toggle({Name = "Notifications", Default = true, Callback = function(State)
+            Library.UI.NotificationEnabled = State
+        end})
+        --
+        SettingsRight:Dropdown({Name = "Notify events", Content = {"All", "Damage dealt", "Player joined", "Player left"}, Default = "All", Callback = function(Value)
+            Library.UI.NotificationEvent = Value
+        end})
+        --
+        SettingsRight:Label({Message = "Menu key"}):Keybind({Default = Enum.KeyCode.Insert, UseMode = false, Callback = function(Key) Library.UI.CloseBind = Key end})
+        SettingsRight:Label({Message = "Menu color"}):ColorPicker({Default = Library.Theme.Default.Accent, Callback = function(Color)
             Library:UpdateColor("Accent", Color)
             Library:UpdateColor("SecondAccent", Color3.fromRGB(math.max(math.floor(Color.R * 255) - 12, 0), math.max(math.floor(Color.G * 255) - 12, 0), math.max(math.floor(Color.B * 255) - 12, 0)))
         end})
-        SettingsSection:Slider({Name = "Menu animation speed", Min = 0, Max = 150, Default = 100, Ending = "%", Disable = {"Off", 0, 150}, Callback = function(Value)
+        SettingsRight:Slider({Name = "Menu animation speed", Min = 0, Max = 150, Default = 100, Ending = "%", Disable = {"Off", 0, 150}, Callback = function(Value)
             local MinSource, MaxSource = 1, 150
             local MinTarget, MaxTarget = 0.8, 0.1
             local NewValue = MinTarget + ((Value - MinSource) * (MaxTarget - MinTarget)) / (MaxSource - MinSource)
             --
             Library.UI.TweenSpeed = Value == (0 or 150) and 0 or NewValue
         end})
-        SettingsSection:Button({Name = "Unload", Callback = Library.Unload})
-        SettingsSection:Button({Name = "Disable all", Callback = Library.Disable})
+        SettingsRight:Button({Name = "Unload", Callback = Library.Unload})
+        SettingsRight:Button({Name = "Disable all", Callback = Library.Disable})
     end
 end
 --
@@ -7552,10 +7608,10 @@ do -- Aimbot
 	FOVSection:Label({Message = "Target color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
 	-- ================== Armas ==================
 	local WeaponOverrides = {
-		{AimbotSubSection2, "Rifle"},
-		{AimbotSubSection3, "Revolver"},
-		{AimbotSubSection4, "Double Barrel SG"},
-		{AimbotSubSection5, "LMG"},
+		{AimbotSubSection2, "Rifles"},
+		{AimbotSubSection3, "Pistol"},
+		{AimbotSubSection4, "Sniper"},
+		{AimbotSubSection5, "Shotguns"},
 	}
 	--
 	for _, Weapon in WeaponOverrides do
@@ -7674,14 +7730,14 @@ end
 --
 Library:Init()
 --
-local Position = "Top Left"
+Library:Connection(Players.PlayerAdded, function(Player)
+    local R, G, B = Library.Theme.Default.Accent.R * 255, Library.Theme.Default.Accent.G * 255, Library.Theme.Default.Accent.B * 255
+    --
+    Library:NotifyEvent("Player joined", ("<font color='rgb(%d, %d, %d)'>%s</font> entered the game"):format(R, G, B, Player.Name))
+end)
 --
-for i = 1, 10 do
-	local R, G, B = Library.Theme.Default.Accent.R * 255, Library.Theme.Default.Accent.G * 255, Library.Theme.Default.Accent.B * 255
-	--
-	Library:Notify({Message = ("hit <font color='rgb(%d, %d, %d)'>awesomegamer5</font> in the <font color='rgb(%d, %d, %d)'>head</font> for <font color='rgb(%d, %d, %d)'>100</font> damage (0 health remaining)"):format(R, G, B, R, G, B, R, G, B), Position = Position, Delay = 3})
-	--
-	Position = Position == "Top Left" and "Middle" or "Top Left"
-	--
-	task.wait(0.5)
-end
+Library:Connection(Players.PlayerRemoving, function(Player)
+    local R, G, B = Library.Theme.Default.Accent.R * 255, Library.Theme.Default.Accent.G * 255, Library.Theme.Default.Accent.B * 255
+    --
+    Library:NotifyEvent("Player left", ("<font color='rgb(%d, %d, %d)'>%s</font> left the game"):format(R, G, B, Player.Name))
+end)
