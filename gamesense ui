@@ -3779,30 +3779,46 @@ do -- Library
                 Options = Library:Validate({
                     Name = "Preview Color Picker",
                     Default = Library.Theme.Default.Accent,
-                    Flag = Library.NewFlag(),
                     Alpha = 0,
                     AlphaBar = true,
+                    Flag = Library.NewFlag(),
+                    MainUI = nil,
+                    TabUI = nil,
                     Callback = function() end,
                 }, Options or {})
-                --
-                local ColorPicker = {}
-                --
+                
+                -- Initialize ColorPicker table with proper properties
+                local ColorPicker = {
+                    Hover = false,
+                    Active = false,
+                    MouseDown = false,
+                    MainFrameHover = false,
+                    Color = Options.Default,
+                    SecondColor = Color3.fromRGB(math.max(math.floor(Options.Default.R * 255) - 14, 0), math.max(math.floor(Options.Default.G * 255) - 14, 0), math.max(math.floor(Options.Default.B * 255) - 14, 0)),
+                    Saturation = {1, 1},
+                    Alpha = Options.Alpha,
+                    Hue = 0,
+                    ActiveFrame = false,
+                    LastCopiedColor = {self.Color, self.Alpha},
+                    FrameOpened = false,
+                }
+                
                 Toggle.ColorPickers[#Toggle.ColorPickers + 1] = ColorPicker
-                --
+                
                 local ColorPickerFrame = Library:ColorPicker({
                     Name = Options.Name,
                     Default = Options.Default,
                     Flag = Options.Flag,
                     Alpha = Options.Alpha,
                     AlphaBar = Options.AlphaBar,
-                    MainUI = Toggle.MainUI,
-                    TabUI = Toggle.TabUI,
+                    MainUI = Options.MainUI or Toggle.MainUI,
+                    TabUI = Options.TabUI or Toggle.TabUI,
                     Callback = Options.Callback,
                     Parent = PreviewToggle,
                     Keybind = Toggle.KeybindState,
                     Count = #Toggle.ColorPickers,
                 })
-                --
+                
                 return ColorPickerFrame
             end
             --
@@ -7204,197 +7220,285 @@ local Rage = Window:CreateTab({Icon = "rbxassetid://18248771514"})
 local AntiAim = Window:CreateTab({Icon = "rbxassetid://15453313321"})
 local Aimbot = Window:CreateTab({Icon = "rbxassetid://15453335745"})
 local Visuals = Window:CreateTab({Icon = "rbxassetid://15453344494"})
+local Misc = Window:CreateTab({Icon = "rbxassetid://15453354931"})
 local Settings = Window:CreateTab({Icon = "rbxassetid://15453349637"})
-local Weapons = Window:CreateTab({Icon = "rbxassetid://15453354931"})
 local PlayerList = Window:CreateTab({Icon = "rbxassetid://15453359751"})
 local Configs = Window:CreateTab({Icon = "rbxassetid://15453364412"})
-local Lua = Window:CreateTab({Icon = "rbxassetid://18240049800"})
 local ActualPlayerList
 --
-Window:SetTab(8)
-AntiAim:Section({Fill = true})
-AntiAim:Section({Fill = true, Side = "Right"})
+Window:SetTab(1)
 --
 do -- Rage
-    Rage:ImageDropdown({Name = "Weapon type", Flag = "RageWeaponType", Options = {["Global"] = {Icon = "rbxassetid://18657040454", Order = 1}, ["Double Barrel SG"] = {Icon = "rbxassetid://18205706952", Order = 2}, ["Revolver"] = {Icon = "rbxassetid://18205704829", Order = 3}, ["LMG"] = {Icon = "rbxassetid://18205822505", Order = 4}}, Default = "Global"})
+    Rage:ImageDropdown({Name = "Weapon type", Flag = "RageWeaponType", Options = { ["Global"] = {Icon = "rbxassetid://18657040454", Order = 1}, ["Double Barrel SG"] = {Icon = "rbxassetid://18205706952", Order = 2}, ["Revolver"] = {Icon = "rbxassetid://18205704829", Order = 3}, ["LMG"] = {Icon = "rbxassetid://18205822505", Order = 4} }, Default = "Global"})
     --
-	Rage:Section({Fill = true, Side = "Right"})
-	local RageSection = Rage:Section({Fill = true})
-	local Toggle1, Toggle2, Toggle3 = nil, nil, nil
-	local Test = nil
-	--
-	local g = RageSection:Toggle({Callback = function(State)
-		if not Toggle1 then return end
-		--
-		Toggle1:SetVisible(State)
-		Toggle2:SetVisible(State)
-		Toggle3:SetVisible(State)
-	end})
-	g:ColorPicker()
-	g:ColorPicker()
-	g:Keybind()
-	--
-	Toggle1 = RageSection:Toggle({Hidden = true, Callback = function(State)
-		if not Test then return end
-		--
-		Test:SetVisible(State)
-	end})
-	Toggle1:Keybind({Default = Enum.KeyCode.Q, Mode = "On hotkey"})
-	Test = RageSection:Slider({Name = "", Hidden = true, Default = 50})
-	Toggle2 = RageSection:List({Hidden = true})
-	Toggle3 = RageSection:Button({Confirmation = true, Hidden = true})
-	--
-	RageSection:Dropdown({Content = {"Option 1", "Option 2"}})
-	RageSection:Label()
-	RageSection:MultiBox({Content = {"Option 1", "Option 2"}})
+    Rage:Section({Fill = true, Side = "Right"})
+    local RageSection = Rage:Section({Fill = true})
+    local Toggle1, Toggle2, Toggle3 = nil, nil, nil
+    local Test = nil
+    --
+    local RageEnabled = RageSection:Toggle({Name = "Enabled", Default = true})
+    RageEnabled:Keybind()
+    RageEnabled:ColorPicker()
+    --
+    RageSection:Dropdown({Name = "Hitbox", Content = {"Head", "Neck", "Chest", "Pelvis", "Random", "Closest"}, Default = "Head"})
+    RageSection:Dropdown({Name = "Target mode", Content = {"FOV", "Distance", "Health", "Priority"}, Default = "FOV"})
+    RageSection:Dropdown({Name = "Aim mode", Content = {"Silent", "Visible", "Mouse", "Resolver"}, Default = "Silent"})
+    RageSection:Dropdown({Name = "Target type", Content = {"Players", "NPCs", "All"}, Default = "Players"})
+    --
+    RageSection:Slider({Name = "Smoothing", Min = 0, Max = 100, Default = 25, Ending = "%"})
+    RageSection:Slider({Name = "FOV", Min = 0, Max = 360, Default = 100, Ending = "°"})
+    RageSection:Slider({Name = "Hit chance", Min = 0, Max = 100, Default = 90, Ending = "%"})
+    RageSection:Slider({Name = "Min damage", Min = 0, Max = 200, Default = 30})
+    RageSection:Slider({Name = "Target switch delay", Min = 0, Max = 1000, Default = 150, Ending = " ms"})
+    RageSection:Slider({Name = "Max targets", Min = 1, Max = 10, Default = 1})
+    --
+    RageSection:Toggle({Name = "Visible check", Default = true})
+    RageSection:Toggle({Name = "Wall check", Default = true})
+    RageSection:Toggle({Name = "Prediction", Default = true})
+    RageSection:Toggle({Name = "Silent aim", Default = true})
+    RageSection:Toggle({Name = "Autoshoot", Default = false})
+    RageSection:Toggle({Name = "Recoil control", Default = false})
+    RageSection:Toggle({Name = "Team check", Default = true})
+    RageSection:Toggle({Name = "Ignore friends", Default = true})
+    RageSection:Toggle({Name = "Ignore local player", Default = false})
+    RageSection:Toggle({Name = "Resolver", Default = true})
+    RageSection:Toggle({Name = "Multipoint", Default = false})
+    RageSection:Toggle({Name = "Backtracking", Default = false})
+    --
+    local SettingsSection = Rage:Section({Name = "General", Fill = true, Side = "Right"})
+    SettingsSection:Toggle({Name = "Auto wall", Default = true})
+    SettingsSection:Toggle({Name = "Force body", Default = false})
+    SettingsSection:Toggle({Name = "Prefer body", Default = false})
+    SettingsSection:Toggle({Name = "Auto stop", Default = true})
+    SettingsSection:Toggle({Name = "Fake lag", Default = false})
+    SettingsSection:Toggle({Name = "Override target", Default = false})
+    SettingsSection:Dropdown({Name = "Anti-aim pitch", Content = {"None", "Down", "Up", "Jitter"}, Default = "None"})
+    SettingsSection:Dropdown({Name = "Anti-aim yaw", Content = {"None", "Backward", "Left", "Right", "Spin"}, Default = "Backward"})
+    SettingsSection:Slider({Name = "Fake lag amount", Min = 0, Max = 20, Default = 5})
+    SettingsSection:Slider({Name = "Body yaw", Min = 0, Max = 180, Default = 60, Ending = "°"})
+    SettingsSection:Label({Message = "Target color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
+    --
+    RageSection:Button({Name = "Force target"})
+    RageSection:Button({Name = "Reset hitscan"})
+end
+--
+do -- AntiAim
+    local AntiAimMain = AntiAim:Section({Name = "Anti-Aim", Fill = true})
+    local AntiAimRight = AntiAim:Section({Name = "Settings", Fill = true, Side = "Right"})
+    --
+    local AntiAimEnabled = AntiAimMain:Toggle({Name = "Enabled", Default = false})
+    AntiAimEnabled:Keybind()
+    AntiAimEnabled:ColorPicker()
+    --
+    AntiAimMain:Dropdown({Name = "Yaw mode", Content = {"Default", "Backwards", "Left", "Right", "Spin", "Random"}, Default = "Default"})
+    AntiAimMain:Dropdown({Name = "Pitch mode", Content = {"None", "Up", "Down", "Jitter"}, Default = "None"})
+    AntiAimMain:Dropdown({Name = "Direction", Content = {"Left", "Right", "Back", "Manual", "Spin"}, Default = "Left"})
+    AntiAimMain:Slider({Name = "Body yaw", Min = 0, Max = 180, Default = 90, Ending = "°"})
+    AntiAimMain:Slider({Name = "Desync amount", Min = 0, Max = 180, Default = 58, Ending = "°"})
+    AntiAimMain:Slider({Name = "Fake lag", Min = 0, Max = 20, Default = 5})
+    AntiAimMain:Slider({Name = "Spin speed", Min = 0, Max = 30, Default = 10, Ending = "x"})
+    --
+    AntiAimMain:Toggle({Name = "Auto yaw", Default = true})
+    AntiAimMain:Toggle({Name = "Jitter", Default = false})
+    AntiAimMain:Toggle({Name = "Randomize", Default = false})
+    AntiAimMain:Toggle({Name = "Visible check", Default = true})
+    AntiAimMain:Toggle({Name = "Break on movement", Default = true})
+    AntiAimMain:Toggle({Name = "Break on attack", Default = false})
+    AntiAimMain:Toggle({Name = "Air check", Default = true})
+    AntiAimMain:Toggle({Name = "Ground check", Default = true})
+    AntiAimMain:Toggle({Name = "Manual anti-aim", Default = false})
+    AntiAimMain:Toggle({Name = "Use resolver", Default = true})
+    --
+    AntiAimRight:Toggle({Name = "Fake walk", Default = false})
+    AntiAimRight:Toggle({Name = "Silent aim override", Default = false})
+    AntiAimRight:Toggle({Name = "Keep facing", Default = true})
+    AntiAimRight:Toggle({Name = "No rotate", Default = false})
+    AntiAimRight:Slider({Name = "Offset", Min = -180, Max = 180, Default = 0, Ending = "°"})
+    AntiAimRight:Dropdown({Name = "Status", Content = {"Legit", "Normal", "Aggressive"}, Default = "Normal"})
+    AntiAimRight:Label({Message = "AA color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
 end
 --
 do -- Visuals
-	local VisualsSubSection, VisualsSubSection2, VisualsSubSection3, VisualsSubSection4 = Visuals:SubSection({Name = "Category", Options = {"rbxassetid://18334627891", "rbxassetid://18334630306", "rbxassetid://18334626899", "rbxassetid://18334625304"}})
-	-- ================== ESP ==================
-	local ESPSection = VisualsSubSection:Section({Name = "ESP", Fill = true})
-	local ESPColors = VisualsSubSection:Section({Name = "Colors", Side = "Right", Fill = true})
-	--
-	local ESP = ESPSection:Toggle({Name = "Enabled", Default = true})
-	ESP:ColorPicker()
-	ESP:Keybind()
-	--
-	local Boxes = ESPSection:Toggle({Name = "Boxes", Default = true})
-	Boxes:ColorPicker()
-	ESPSection:Dropdown({Name = "Box type", Content = {"2D", "Corner", "3D"}, Default = "2D"})
-	--
-	local Names = ESPSection:Toggle({Name = "Names", Default = true})
-	Names:ColorPicker()
-	--
-	local Distance = ESPSection:Toggle({Name = "Distance", Default = true})
-	Distance:ColorPicker()
-	--
-	local Weapon = ESPSection:Toggle({Name = "Weapon", Default = true})
-	Weapon:ColorPicker()
-	--
-	local HealthBar = ESPSection:Toggle({Name = "Health bar", Default = true})
-	HealthBar:ColorPicker()
-	ESPSection:Toggle({Name = "Health text", Default = true})
-	ESPSection:Toggle({Name = "Armor bar", Default = false})
-	--
-	local Skeleton = ESPSection:Toggle({Name = "Skeleton", Default = false})
-	Skeleton:ColorPicker()
-	--
-	local HeadDot = ESPSection:Toggle({Name = "Head dot", Default = false})
-	HeadDot:ColorPicker()
-	--
-	local FilledBox = ESPSection:Toggle({Name = "Filled box", Default = false})
-	FilledBox:ColorPicker()
-	ESPSection:Slider({Name = "Filled box alpha", Min = 0, Max = 100, Default = 50, Ending = "%"})
-	--
-	ESPSection:Toggle({Name = "Team check", Default = true})
-	ESPSection:Toggle({Name = "Enemies", Default = true})
-	ESPSection:Toggle({Name = "Friends", Default = true})
-	ESPSection:Toggle({Name = "Local player", Default = false})
-	ESPSection:Toggle({Name = "NPCs", Default = false})
-	--
-	ESPSection:Slider({Name = "Max distance", Min = 100, Max = 10000, Default = 2000})
-	ESPSection:Slider({Name = "Update rate", Min = 1, Max = 60, Default = 15})
-	ESPSection:Slider({Name = "Text size", Min = 8, Max = 20, Default = 13})
-	--
-	ESPColors:Label({Message = "Visible color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
-	ESPColors:Label({Message = "Hidden color"}):ColorPicker({Default = Color3.fromRGB(205, 205, 205)})
-	ESPColors:Label({Message = "Filled box color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39), Alpha = 0.5})
-	ESPColors:Label({Message = "Health color"}):ColorPicker({Default = Color3.fromRGB(60, 220, 60)})
-	ESPColors:Label({Message = "Armor color"}):ColorPicker({Default = Color3.fromRGB(60, 140, 240)})
-	-- ================== Chams ==================
-	local ChamsSection = VisualsSubSection2:Section({Name = "Chams", Fill = true})
-	local ChamsColors = VisualsSubSection2:Section({Name = "Colors", Side = "Right", Fill = true})
-	--
-	local Chams = ChamsSection:Toggle({Name = "Enabled", Default = false})
-	Chams:ColorPicker()
-	Chams:Keybind()
-	--
-	ChamsSection:Dropdown({Name = "Material", Content = {"ForceField", "Glass", "Neon", "Plastic", "Smooth Plastic", "Metal", "Ice"}, Default = "Neon"})
-	ChamsSection:Slider({Name = "Transparency", Min = 0, Max = 100, Default = 0, Ending = "%"})
-	ChamsSection:Toggle({Name = "Visible only", Default = false})
-	ChamsSection:Toggle({Name = "XQZ (through walls)", Default = true})
-	ChamsSection:Toggle({Name = "Team check", Default = true})
-	ChamsSection:Toggle({Name = "Enemies", Default = true})
-	ChamsSection:Toggle({Name = "Friends", Default = true})
-	ChamsSection:Toggle({Name = "Local player", Default = false})
-	--
-	ChamsColors:Label({Message = "Visible color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
-	ChamsColors:Label({Message = "Hidden color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
-	ChamsColors:Label({Message = "Friend color"}):ColorPicker({Default = Color3.fromRGB(80, 180, 255)})
-	-- ================== Glow ==================
-	local GlowSection = VisualsSubSection3:Section({Name = "Glow", Fill = true})
-	local GlowColors = VisualsSubSection3:Section({Name = "Colors", Side = "Right", Fill = true})
-	--
-	local Glow = GlowSection:Toggle({Name = "Enabled", Default = false})
-	Glow:ColorPicker()
-	Glow:Keybind()
-	--
-	GlowSection:Slider({Name = "Radius", Min = 1, Max = 50, Default = 10})
-	GlowSection:Slider({Name = "Intensity", Min = 0, Max = 100, Default = 50, Ending = "%"})
-	GlowSection:Toggle({Name = "Health based color", Default = false})
-	GlowSection:Toggle({Name = "Team check", Default = true})
-	GlowSection:Toggle({Name = "Visible only", Default = false})
-	GlowSection:Toggle({Name = "Enemies", Default = true})
-	GlowSection:Toggle({Name = "Friends", Default = true})
-	--
-	GlowColors:Label({Message = "Visible color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
-	GlowColors:Label({Message = "Hidden color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
-	-- ================== Tracers / Outros ==================
-	local OtherSection = VisualsSubSection4:Section({Name = "Other", Fill = true})
-	local OtherColors = VisualsSubSection4:Section({Name = "Colors", Side = "Right", Fill = true})
-	--
-	local Tracers = OtherSection:Toggle({Name = "Tracers", Default = false})
-	Tracers:ColorPicker()
-	OtherSection:Dropdown({Name = "Tracer origin", Content = {"Bottom", "Middle", "Head"}, Default = "Bottom"})
-	OtherSection:Slider({Name = "Tracer thickness", Min = 1, Max = 5, Default = 1})
-	--
-	local OffscreenArrows = OtherSection:Toggle({Name = "Offscreen arrows", Default = false})
-	OffscreenArrows:ColorPicker()
-	OtherSection:Slider({Name = "Arrow size", Min = 5, Max = 30, Default = 12})
-	OtherSection:Slider({Name = "Arrow distance", Min = 20, Max = 200, Default = 60})
-	--
-	local Highlight = OtherSection:Toggle({Name = "Highlight target", Default = false})
-	Highlight:ColorPicker()
-	--
-	OtherSection:Toggle({Name = "Rainbow mode", Default = false})
-	OtherSection:Slider({Name = "Rainbow speed", Min = 1, Max = 10, Default = 3})
-	OtherSection:Toggle({Name = "Out of view fade", Default = false})
-	--
-	OtherColors:Label({Message = "Tracer color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
-	OtherColors:Label({Message = "Arrow color"}):ColorPicker({Default = Color3.fromRGB(255, 255, 255)})
-	OtherColors:Label({Message = "Highlight color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
+	    
+        local VisualsSubSection, VisualsSubSection2, VisualsSubSection3, VisualsSubSection4 = Visuals:SubSection({Name = "Category", Options = {"rbxassetid://18334627891", "rbxassetid://18334630306", "rbxassetid://18334626899", "rbxassetid://18334625304"}})
+	    -- ================== ESP ==================
+        do
+	    local ESPSection = VisualsSubSection:Section({Name = "ESP", Fill = true})
+	    local ESPColors = VisualsSubSection:Section({Name = "Colors", Side = "Right", Fill = true})
+	    --
+	    local ESP = ESPSection:Toggle({Name = "Enabled", Default = true})
+	    ESP:ColorPicker()
+	    ESP:Keybind()
+	    --
+	    local Boxes = ESPSection:Toggle({Name = "Boxes", Default = true})
+	    Boxes:ColorPicker()
+	    ESPSection:Dropdown({Name = "Box type", Content = {"2D", "Corner", "3D"}, Default = "2D"})
+	    --
+	    local Names = ESPSection:Toggle({Name = "Names", Default = true})
+	    Names:ColorPicker()
+	    --
+	    local Distance = ESPSection:Toggle({Name = "Distance", Default = true})
+	    Distance:ColorPicker()
+	    --
+	    local Weapon = ESPSection:Toggle({Name = "Weapon", Default = true})
+	    Weapon:ColorPicker()
+	    --
+	    local HealthBar = ESPSection:Toggle({Name = "Health bar", Default = true})
+	    HealthBar:ColorPicker()
+	    ESPSection:Toggle({Name = "Health text", Default = true})
+	    ESPSection:Toggle({Name = "Armor bar", Default = false})
+	    --
+	    local Skeleton = ESPSection:Toggle({Name = "Skeleton", Default = false})
+	    Skeleton:ColorPicker()
+	    --
+	    local HeadDot = ESPSection:Toggle({Name = "Head dot", Default = false})
+	    HeadDot:ColorPicker()
+	    --
+	    local FilledBox = ESPSection:Toggle({Name = "Filled box", Default = false})
+	    FilledBox:ColorPicker()
+	    ESPSection:Slider({Name = "Filled box alpha", Min = 0, Max = 100, Default = 50, Ending = "%"})
+	    --
+	    ESPSection:Toggle({Name = "Team check", Default = true})
+	    ESPSection:Toggle({Name = "Enemies", Default = true})
+	    ESPSection:Toggle({Name = "Friends", Default = true})
+	    ESPSection:Toggle({Name = "Local player", Default = false})
+	    ESPSection:Toggle({Name = "NPCs", Default = false})
+	    --
+	    ESPSection:Slider({Name = "Max distance", Min = 100, Max = 10000, Default = 2000})
+	    ESPSection:Slider({Name = "Update rate", Min = 1, Max = 60, Default = 15})
+	    ESPSection:Slider({Name = "Text size", Min = 8, Max = 20, Default = 13})
+	    --
+	    ESPColors:Label({Message = "Visible color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
+	    ESPColors:Label({Message = "Hidden color"}):ColorPicker({Default = Color3.fromRGB(205, 205, 205)})
+	    ESPColors:Label({Message = "Filled box color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39), Alpha = 0.5})
+	    ESPColors:Label({Message = "Health color"}):ColorPicker({Default = Color3.fromRGB(60, 220, 60)})
+	    ESPColors:Label({Message = "Armor color"}):ColorPicker({Default = Color3.fromRGB(60, 140, 240)})
+	    -- ================== Chams ==================
+	    local ChamsSection = VisualsSubSection2:Section({Name = "Chams", Fill = true})
+	    local ChamsColors = VisualsSubSection2:Section({Name = "Colors", Side = "Right", Fill = true})
+	    --
+	    local Chams = ChamsSection:Toggle({Name = "Enabled", Default = false})
+	    Chams:ColorPicker()
+	    Chams:Keybind()
+	    --
+	    ChamsSection:Dropdown({Name = "Material", Content = {"ForceField", "Glass", "Neon", "Plastic", "Smooth Plastic", "Metal", "Ice"}, Default = "Neon"})
+	    ChamsSection:Slider({Name = "Transparency", Min = 0, Max = 100, Default = 0, Ending = "%"})
+	    ChamsSection:Toggle({Name = "Visible only", Default = false})
+	    ChamsSection:Toggle({Name = "XQZ (through walls)", Default = true})
+	    ChamsSection:Toggle({Name = "Team check", Default = true})
+	    ChamsSection:Toggle({Name = "Enemies", Default = true})
+	    ChamsSection:Toggle({Name = "Friends", Default = true})
+	    ChamsSection:Toggle({Name = "Local player", Default = false})
+	    --
+	    ChamsColors:Label({Message = "Visible color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
+	    ChamsColors:Label({Message = "Hidden color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
+	    ChamsColors:Label({Message = "Friend color"}):ColorPicker({Default = Color3.fromRGB(80, 180, 255)})
+	    -- ================== Glow ==================
+	    local GlowSection = VisualsSubSection3:Section({Name = "Glow", Fill = true})
+	    local GlowColors = VisualsSubSection3:Section({Name = "Colors", Side = "Right", Fill = true})
+	    --
+	    local Glow = GlowSection:Toggle({Name = "Enabled", Default = false})
+	    Glow:ColorPicker()
+	    Glow:Keybind()
+	    --
+	    GlowSection:Slider({Name = "Radius", Min = 1, Max = 50, Default = 10})
+	    GlowSection:Slider({Name = "Intensity", Min = 0, Max = 100, Default = 50, Ending = "%"})
+	    GlowSection:Toggle({Name = "Health based color", Default = false})
+	    GlowSection:Toggle({Name = "Team check", Default = true})
+	    GlowSection:Toggle({Name = "Visible only", Default = false})
+	    GlowSection:Toggle({Name = "Enemies", Default = true})
+	    GlowSection:Toggle({Name = "Friends", Default = true})
+	    --
+	    GlowColors:Label({Message = "Visible color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
+	    GlowColors:Label({Message = "Hidden color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
+	    -- ================== Tracers / Outros ==================
+	    local OtherSection = VisualsSubSection4:Section({Name = "Other", Fill = true})
+	    local OtherColors = VisualsSubSection4:Section({Name = "Colors", Side = "Right", Fill = true})
+	    --
+	    local Tracers = OtherSection:Toggle({Name = "Tracers", Default = false})
+	    Tracers:ColorPicker()
+	    OtherSection:Dropdown({Name = "Tracer origin", Content = {"Bottom", "Middle", "Head"}, Default = "Bottom"})
+	    OtherSection:Slider({Name = "Tracer thickness", Min = 1, Max = 5, Default = 1})
+	    --
+	    local OffscreenArrows = OtherSection:Toggle({Name = "Offscreen arrows", Default = false})
+	    OffscreenArrows:ColorPicker()
+	    OtherSection:Slider({Name = "Arrow size", Min = 5, Max = 30, Default = 12})
+	    OtherSection:Slider({Name = "Arrow distance", Min = 20, Max = 200, Default = 60})
+	    --
+	    local Highlight = OtherSection:Toggle({Name = "Highlight target", Default = false})
+	    Highlight:ColorPicker()
+	    --
+	    OtherSection:Toggle({Name = "Rainbow mode", Default = false})
+	    OtherSection:Slider({Name = "Rainbow speed", Min = 1, Max = 10, Default = 3})
+	    OtherSection:Toggle({Name = "Out of view fade", Default = false})
+	    --
+	    OtherColors:Label({Message = "Tracer color"}):ColorPicker({Default = Color3.fromRGB(153, 196, 39)})
+	    OtherColors:Label({Message = "Arrow color"}):ColorPicker({Default = Color3.fromRGB(255, 255, 255)})
+	    OtherColors:Label({Message = "Highlight color"}):ColorPicker({Default = Color3.fromRGB(255, 80, 80)})
+    end
+end
+--
+do -- Misc
+    local Movement = Misc:Section({Name = "Movement", Fill = true})
+    local Utility = Misc:Section({Name = "Utility", Side = "Right", Fill = true})
+    local ExploitSection = Misc:Section({Name = "Exploits", Fill = true})
+    --
+    local Bhop = Movement:Toggle({Name = "Bunny hop", Default = true})
+    Bhop:Keybind()
+    Movement:Toggle({Name = "Auto strafe", Default = true})
+    Movement:Toggle({Name = "Edge jump", Default = false})
+    Movement:Toggle({Name = "Fast stop", Default = false})
+    Movement:Toggle({Name = "Jump bug", Default = false})
+    Movement:Toggle({Name = "Slide walk", Default = false})
+    Movement:Slider({Name = "Jump height", Min = 0, Max = 100, Default = 50, Ending = "%"})
+    Movement:Slider({Name = "Strafe speed", Min = 0, Max = 100, Default = 65, Ending = "%"})
+    --
+    local Watermark = Utility:Toggle({Name = "Watermark", Default = true})
+    Watermark:ColorPicker()
+    Utility:Toggle({Name = "Spectator list", Default = true})
+    Utility:Toggle({Name = "Keybinds", Default = true})
+    Utility:Toggle({Name = "Hit sound", Default = false})
+    Utility:Toggle({Name = "Crosshair", Default = true})
+    Utility:Slider({Name = "Crosshair size", Min = 3, Max = 20, Default = 8})
+    Utility:Label({Message = "Theme color"}):ColorPicker({Default = Library.Theme.Default.Accent})
+    --
+    local SpectatorList = Utility:List({Size = 110})
+    SpectatorList:AddValue("awesomegamer5")
+    SpectatorList:AddValue("bob")
+    SpectatorList:AddValue("mark123")
+    SpectatorList:AddValue("neo")
+    --
+    local ExploitEnabled = ExploitSection:Toggle({Name = "Enabled", Default = false})
+    ExploitEnabled:Keybind()
+    ExploitSection:Dropdown({Name = "Mode", Content = {"Teleport", "High speed", "Fast attack", "Flight"}, Default = "Teleport"})
+    ExploitSection:Slider({Name = "Speed", Min = 0, Max = 100, Default = 20, Ending = "%"})
+    ExploitSection:Slider({Name = "Delay", Min = 0, Max = 500, Default = 100, Ending = " ms"})
+    ExploitSection:Toggle({Name = "Infinite stamina", Default = false})
+    ExploitSection:Toggle({Name = "No recoil", Default = false})
+    ExploitSection:Toggle({Name = "No spread", Default = false})
+    ExploitSection:Toggle({Name = "Fast reload", Default = false})
+    ExploitSection:Toggle({Name = "Instant weapon swap", Default = false})
 end
 --
 do -- Settings
-	local SettingsSection = Settings:Section({Name = "Settings", Side = "Right", Fill = true})
-	--
-	do -- Settings
-		SettingsSection:Label({Message = "Menu key"}):Keybind({Default = Enum.KeyCode.Insert, UseMode = false, Callback = function(Key) Library.UI.CloseBind = Key end})
-		SettingsSection:Label({Message = "Menu color"}):ColorPicker({Default = Library.Theme.Default.Accent, Callback = function(Color)
-			Library:UpdateColor("Accent", Color)
-			Library:UpdateColor("SecondAccent", Color3.fromRGB(math.max(math.floor(Color.R * 255) - 12, 0), math.max(math.floor(Color.G * 255) - 12, 0), math.max(math.floor(Color.B * 255) - 12, 0)))
-		end})
-		SettingsSection:Slider({Name = "Menu animation speed", Min = 0, Max = 150, Default = 100, Ending = "%", Disable = {"Off", 0, 150}, Callback = function(Value)
-			local MinSource, MaxSource = 1, 150
-			local MinTarget, MaxTarget = 0.8, 0.1
-			local NewValue = MinTarget + ((Value - MinSource) * (MaxTarget - MinTarget)) / (MaxSource - MinSource)
-			--
-			Library.UI.TweenSpeed = Value == (0 or 150) and 0 or NewValue
-		end})
-		SettingsSection:Button({Name = "Unload", Callback = Library.Unload})
-		SettingsSection:Button({Name = "Disable all", Callback = Library.Disable})
-	end
-end
---
-do -- Weapons
-	local SkinsSection = Weapons:Section({Name = "Skins", Fill = true})
-	local SkinList = SkinsSection:List({Size = 200})
-	--
-	SkinList:AddValue("Test Skin 1", {Image = "http://www.roblox.com/asset/?id=12206409737", Color = Color3.fromRGB(232, 0, 0), Size = UDim2.fromOffset(5, 5), Position = UDim2.new(0, 11, 0.5, 0)})
-	SkinList:AddValue("Test Skin 2", {Image = "http://www.roblox.com/asset/?id=12206409737", Color = Color3.fromRGB(2, 144, 232), Size = UDim2.fromOffset(5, 5), Position = UDim2.new(0, 11, 0.5, 0)})
-	SkinList:AddValue("Test Skin 3", {Image = "http://www.roblox.com/asset/?id=12206409737", Color = Color3.fromRGB(198, 7, 232), Size = UDim2.fromOffset(5, 5), Position = UDim2.new(0, 11, 0.5, 0)})
-	SkinList:AddValue("Test Skin 4", {Image = "http://www.roblox.com/asset/?id=12206409737", Color = Color3.fromRGB(36, 232, 1), Size = UDim2.fromOffset(5, 5), Position = UDim2.new(0, 11, 0.5, 0)})
+    local SettingsSection = Settings:Section({Name = "Settings", Side = "Right", Fill = true})
+    --
+    do -- Settings
+        SettingsSection:Label({Message = "Menu key"}):Keybind({Default = Enum.KeyCode.Insert, UseMode = false, Callback = function(Key) Library.UI.CloseBind = Key end})
+        SettingsSection:Label({Message = "Menu color"}):ColorPicker({Default = Library.Theme.Default.Accent, Callback = function(Color)
+            Library:UpdateColor("Accent", Color)
+            Library:UpdateColor("SecondAccent", Color3.fromRGB(math.max(math.floor(Color.R * 255) - 12, 0), math.max(math.floor(Color.G * 255) - 12, 0), math.max(math.floor(Color.B * 255) - 12, 0)))
+        end})
+        SettingsSection:Slider({Name = "Menu animation speed", Min = 0, Max = 150, Default = 100, Ending = "%", Disable = {"Off", 0, 150}, Callback = function(Value)
+            local MinSource, MaxSource = 1, 150
+            local MinTarget, MaxTarget = 0.8, 0.1
+            local NewValue = MinTarget + ((Value - MinSource) * (MaxTarget - MinTarget)) / (MaxSource - MinSource)
+            --
+            Library.UI.TweenSpeed = Value == (0 or 150) and 0 or NewValue
+        end})
+        SettingsSection:Button({Name = "Unload", Callback = Library.Unload})
+        SettingsSection:Button({Name = "Disable all", Callback = Library.Disable})
+    end
 end
 --
 do -- Aimbot
@@ -7484,91 +7588,88 @@ do -- Aimbot
 end
 --
 do -- PlayerList
-	local PlayerSection = PlayerList:Section({Name = "Players", Fill = true})
-	local PlayerAdjustments = PlayerList:Section({Name = "Adjustments", Fill = true, Side = "Right"})
-	--
-	do -- Player Section
-		ActualPlayerList = PlayerSection:List({Flag = "PlayerListCurrentPlayer", Size = 300})
-		--
-		PlayerSection:Button({Name = "View player", Callback = function()
-			local Player = Players:FindFirstChild(Library.Flags["PlayerListCurrentPlayer"]:Get())
-			--
-			if Player then
-				Library:ViewPlayer(Player)
-			end
-		end})
-		--
-		for _, Player in Players:GetPlayers() do
-			ActualPlayerList:AddValue(Player.Name, {Image = Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)})
-		end
-	end
-	--
-	do -- Adjustments
-		PlayerAdjustments:Toggle({Name = "Whitelisted"})
-	end
+    local PlayerSection = PlayerList:Section({Name = "Players", Fill = true})
+    local PlayerAdjustments = PlayerList:Section({Name = "Adjustments", Fill = true, Side = "Right"})
+    --
+    do -- Player Section
+        ActualPlayerList = PlayerSection:List({
+            Flag = "PlayerListCurrentPlayer",
+            Size = 220,
+            Callback = function(Value)
+                local Player = Players:FindFirstChild(Value)
+                if not Player then return end
+            end
+        })
+        --
+        PlayerSection:Button({Name = "View player", Callback = function()
+            local Player = Players:FindFirstChild(Library.Flags["PlayerListCurrentPlayer"]:Get())
+            if Player then
+                Library:ViewPlayer(Player)
+            end
+        end})
+        --
+        for _, Player in Players:GetPlayers() do
+            ActualPlayerList:AddValue(Player.Name)
+        end
+    end
+    --
+    do -- Adjustments
+        PlayerAdjustments:Toggle({Name = "Whitelist"})
+        PlayerAdjustments:Toggle({Name = "Blacklist"})
+        PlayerAdjustments:Toggle({Name = "Friends"})
+        PlayerAdjustments:Toggle({Name = "Spectators"})
+        PlayerAdjustments:Toggle({Name = "Show display names"})
+        PlayerAdjustments:Toggle({Name = "Show user IDs"})
+        PlayerAdjustments:Toggle({Name = "Show avatars"})
+        PlayerAdjustments:Toggle({Name = "Hide dead"})
+        PlayerAdjustments:Toggle({Name = "Priority"})
+    end
 end
 --
 do -- Configs
-	local ConfigSection = Configs:Section({Name = "Configs", Fill = true})
-	local LuaSection = Configs:Section({Name = "LUA", Side = "Right", Fill = true})
-	--
-	do -- Configs
-		local ConfigList = ConfigSection:List({Size = 200, Flag = "CurrentConfig"})
-		--
-		Library:UpdateConfigList(ConfigList, "Add")
-		--
-		ConfigSection:Button({Name = "Update config", Callback = function()
-			if Library.Flags["CurrentConfig"]:Get() then
-				writefile("LuckyHub/Configs/" .. Library.Flags["CurrentConfig"]:Get() .. ".cfg", Library:GetConfig())
-			end
-		end})
-		ConfigSection:Button({Name = "Load config", Callback = function()
-			if Library.Flags["CurrentConfig"]:Get() then
-				Library:LoadConfig(readfile("LuckyHub/Configs/" .. Library.Flags["CurrentConfig"]:Get() .. ".cfg"))
-			end
-		end})
-		ConfigSection:TextBox({Flag = "ConfigName"})
-		ConfigSection:Button({Name = "Create config", Callback = function()
-			local ConfigName = Library.Flags["ConfigName"]:Get()
-			--
-			if Library.Flags["ConfigName"]:Get() ~= "" and not isfile("LuckyHub/Configs/" .. ConfigName .. ".cfg") then
-			    writefile("LuckyHub/Configs/" .. ConfigName .. ".cfg", Library:GetConfig())
-			    --
-			    ConfigList:AddValue(ConfigName)
-			end
-		end})
-		ConfigSection:Button({Name = "Refresh list", Callback = function()
-			Library:UpdateConfigList(ConfigList, "Remove")
-			Library:UpdateConfigList(ConfigList, "Add")
-		end})
-	end
-	--
-	do -- LUA
-		local LuaList = LuaSection:List({Size = 75})
-		--
-		LuaSection:Button({Name = "Load script"})
-		LuaSection:Button({Name = "Unload script"})
-		LuaSection:Button({Name = "Refresh list"})
-	end
-end
---
-do -- Lua
-	local TabA = Lua:Section({Name = "Tab A", Fill = true})
-	local TabB = Lua:Section({Name = "Tab B", Side = "Right", Fill = true})
+    local ConfigSection = Configs:Section({Name = "Configs", Fill = true})
+    --
+    do -- Configs
+        local ConfigList = ConfigSection:List({Size = 200, Flag = "CurrentConfig"})
+        --
+        Library:UpdateConfigList(ConfigList, "Add")
+        --
+        ConfigSection:Button({Name = "Update config", Callback = function()
+            if Library.Flags["CurrentConfig"]:Get() then
+                writefile("LuckyHub/Configs/" .. Library.Flags["CurrentConfig"]:Get() .. ".cfg", Library:GetConfig())
+            end
+        end})
+        ConfigSection:Button({Name = "Load config", Callback = function()
+            if Library.Flags["CurrentConfig"]:Get() then
+                Library:LoadConfig(readfile("LuckyHub/Configs/" .. Library.Flags["CurrentConfig"]:Get() .. ".cfg"))
+            end
+        end})
+        ConfigSection:TextBox({Flag = "ConfigName"})
+        ConfigSection:Button({Name = "Create config", Callback = function()
+            local ConfigName = Library.Flags["ConfigName"]:Get()
+            --
+            if Library.Flags["ConfigName"]:Get() ~= "" and not isfile("LuckyHub/Configs/" .. ConfigName .. ".cfg") then
+                writefile("LuckyHub/Configs/" .. ConfigName .. ".cfg", Library:GetConfig())
+                ConfigList:AddValue(ConfigName)
+            end
+        end})
+        ConfigSection:Button({Name = "Refresh list", Callback = function()
+            Library:UpdateConfigList(ConfigList, "Remove")
+            Library:UpdateConfigList(ConfigList, "Add")
+        end})
+    end
 end
 --
 do -- Connections
-	Library:Connection(Players.PlayerAdded, function(Player)
-		if not ActualPlayerList then return end
-		--
-		ActualPlayerList:AddValue(Player.Name, {Image = Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)})
-	end)
-	--
-	Library:Connection(Players.PlayerRemoving, function(Player)
-		if not ActualPlayerList then return end
-		--
-		ActualPlayerList:AddValue(Player.Name, {Image = Players:GetUserThumbnailAsync(Player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)})
-	end)
+    Library:Connection(Players.PlayerAdded, function(Player)
+        if not ActualPlayerList then return end
+        ActualPlayerList:AddValue(Player.Name)
+    end)
+    --
+    Library:Connection(Players.PlayerRemoving, function(Player)
+        if not ActualPlayerList then return end
+        ActualPlayerList:RemoveValue(Player.Name)
+    end)
 end
 --
 Library:Init()
